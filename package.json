@@ -1,7 +1,7 @@
 {
   "name": "hoplog",
   "version": "1.0.0",
- "dependencies": {
+  "dependencies": {
    "react": "^18.2.0",
    "react-dom": "^18.2.0"
   }
