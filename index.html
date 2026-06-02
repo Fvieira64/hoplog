@@ -1,12 +1,63 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HopLog</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
-</html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HopLog 🍺</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f0c08; font-family: Georgia, serif; color: #ddd; }
+    input, textarea, button { font-family: Georgia, serif; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+const SEED_USERS = [
+  { id:"u1", username:"hophavoc", password:"Hopsesame69", avatar:"🍺" },
+  { id:"u2", username:"ruiamaro", password:"rui123", avatar:"🌾" },
+];
+const avg = arr => arr.length ? (arr.reduce((s,v)=>s+v,0)/arr.length).toFixed(1) : null;
+const fmtDate = iso => new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+const starLabel = n => ["","★☆☆☆☆","★★☆☆☆","★★★☆☆","★★★★☆","★★★★★"][n]??"";
+const toBase64 = file => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+const store = {
+  async get(key){ try{ const r=await window.storage.get(key,true); return r?JSON.parse(r.value):null; }catch{ return null; } },
+  async set(key,val){ try{ await window.storage.set(key,JSON.stringify(val),true); }catch{} }
+};
+function App() {
+  const [me,setMe]=useState(null); const [breweries,setBreweries]=useState([]); const [view,setView]=useState("feed"); const [selected,setSelected]=useState(null); const [loading,setLoading]=useState(true);
+  useEffect(()=>{ (async()=>{ const s=await store.get("breweries"); if(s) setBreweries(s); setLoading(false); })(); },[]);
+  const save=async next=>{ setBreweries(next); await store.set("breweries",next); };
+  if(loading) return React.createElement('div',{style:{background:"#0f0c08",height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}},React.createElement('div',{style:{fontSize:64}},"🍺"),React.createElement('p',{style:{color:"#c8a96e",marginTop:16}},"Loading…"));
+  if(!me) return <Login onLogin={setMe} />;
+  return (
+    <div style={{background:"#0f0c08",minHeight:"100vh",display:"flex",flexDirection:"column"}}>
+      <header style={{background:"#13100c",borderBottom:"1px solid #2e2418",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:10}}>
+        <span style={{color:"#c8a96e",fontSize:20,fontWeight:"bold"}}>🍺 HopLog</span>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:22}}>{me.avatar}</span>
+          <span style={{color:"#e8d5a3",fontSize:14}}>{me.username}</span>
+          <button onClick={()=>setMe(null)} style={{background:"transparent",border:"1px solid #2e2418",color:"#888",borderRadius:6,padding:"3px 8px",fontSize:12,cursor:"pointer"}}>Out</button>
+        </div>
+      </header>
+      <main style={{flex:1,overflowY:"auto",paddingBottom:80}}>
+        {view==="feed" && <Feed breweries={breweries} me={me} onSelect={b=>{setSelected(b);setView("detail");}} />}
+        {view==="add" && <AddBrewery me={me} onSave={b=>{save([b,...breweries]);setView("feed");}} onCancel={()=>setView("feed")} />}
+        {view==="detail" && selected && <Detail brewery={breweries.find(b=>b.id===selected.id)||selected} me={me} onUpdate={u=>{save(breweries.map(b=>b.id===u.id?u:b));setSelected(u);}} onBack={()=>setView("feed")} />}
+      </main>
+      {(view==="feed"||view==="add") && (
+        <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"#13100c",borderTop:"1px solid #2e2418",display:"flex",alignItems:"center",justifyContent:"space-around",height:60,zIndex:10}}>
+          <button onClick={()=>setView("feed")} style={{background:"transparent",border:"none",color:view==="feed"?"#c8a96e":"#666",display:"flex",flexDirection:"column",alignItems:"center",cursor:"pointer",flex:1,gap:2,fontSize:11}}><span style={{fontSize:22}}>🗺</span>Breweries</button>
+          <button onClick={()=>setView("add")} style={{background:"#c8a96e",color:"#0f0c08",border:"none",borderRadius:"50%",width:52,height:52,fontSize:26,cursor:"pointer",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"center"}}>＋</button>
+          <button disabled style={{background:"transparent",border:"none",color:"#444",display:"flex",flexDirection:"column",alignItems:"center",flex:1,gap:2,fontSize:11}}><span style={{fontSize:22}}>📊</span>Stats</button>
+        </nav>
+      )}
+    </div>
+  );
+}
+
