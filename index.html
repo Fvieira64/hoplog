@@ -3,275 +3,105 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HopLog</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+  <title>HopLog 🍺</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:#f7f5f2;font-family:'Inter',sans-serif;color:#1a1a1a;}
-    input,textarea,button,select{font-family:'Inter',sans-serif;}
-    ::-webkit-scrollbar{width:4px;}
-    ::-webkit-scrollbar-track{background:#f7f5f2;}
-    ::-webkit-scrollbar-thumb{background:#ddd;border-radius:4px;}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-    .fade-in{animation:fadeIn .25s ease}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f0c08; font-family: Georgia, serif; color: #ddd; }
+    input, textarea, button { font-family: Georgia, serif; }
   </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
-
-const USERS = [
-  { id:"u1", username:"hophavoc", password:"Hopsesame69", avatar:"H", color:"#e8845c" },
-  { id:"u2", username:"ruiamaro", password:"rui123",       avatar:"R", color:"#5c8ee8" },
+const SEED_USERS = [
+  { id:"u1", username:"hophavoc", password:"Hopsesame69", avatar:"🍺" },
+  { id:"u2", username:"ruiamaro", password:"rui123", avatar:"🌾" },
 ];
-
 const avg = arr => arr.length ? (arr.reduce((s,v)=>s+v,0)/arr.length).toFixed(1) : null;
 const fmtDate = iso => new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+const starLabel = n => ["","★☆☆☆☆","★★☆☆☆","★★★☆☆","★★★★☆","★★★★★"][n]??"";
 const toBase64 = file => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
 const store = {
-  async get(k){ try{ const r=await window.storage.get(k,true); return r?JSON.parse(r.value):null; }catch{ return null; } },
-  async set(k,v){ try{ await window.storage.set(k,JSON.stringify(v),true); }catch{} }
+  async get(key){ try{ const r=await window.storage.get(key,true); return r?JSON.parse(r.value):null; }catch{ return null; } },
+  async set(key,val){ try{ await window.storage.set(key,JSON.stringify(val),true); }catch{} }
 };
-
-// ── Avatar ────────────────────────────────────────────────────────────────────
-function Avatar({user, size=32}){
-  const u = USERS.find(x=>x.id===user?.id||x.username===user?.username) || user;
-  return <div style={{width:size,height:size,borderRadius:"50%",background:u?.color||"#ccc",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:600,fontSize:size*0.4}}>{u?.avatar||"?"}</div>;
-}
-
-// ── Stars ─────────────────────────────────────────────────────────────────────
-function Stars({score, onChange, size=20}){
-  const [hover,setHover]=useState(0);
-  return <div style={{display:"flex",gap:2}}>
-    {[1,2,3,4,5].map(n=>(
-      <span key={n} onMouseEnter={()=>onChange&&setHover(n)} onMouseLeave={()=>onChange&&setHover(0)}
-        onClick={()=>onChange&&onChange(n)}
-        style={{fontSize:size,cursor:onChange?"pointer":"default",color:(hover||score)>=n?"#f59e0b":"#e5e7eb",transition:"color .1s"}}>★</span>
-    ))}
-  </div>;
-}
-
-// ── App ───────────────────────────────────────────────────────────────────────
-function App(){
-  const [me,setMe]=useState(null);
-  const [breweries,setBreweries]=useState([]);
-  const [view,setView]=useState("feed");
-  const [selected,setSelected]=useState(null);
-  const [loading,setLoading]=useState(true);
-
-  useEffect(()=>{(async()=>{ const s=await store.get("breweries"); if(s) setBreweries(s); setLoading(false); })();},[]);
+function App() {
+  const [me,setMe]=useState(null); const [breweries,setBreweries]=useState([]); const [view,setView]=useState("feed"); const [selected,setSelected]=useState(null); const [loading,setLoading]=useState(true);
+  useEffect(()=>{ (async()=>{ const s=await store.get("breweries"); if(s) setBreweries(s); setLoading(false); })(); },[]);
   const save=async next=>{ setBreweries(next); await store.set("breweries",next); };
-
-  if(loading) return (
-    <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#f7f5f2"}}>
-      <div style={{fontSize:48,marginBottom:12}}>🍺</div>
-      <div style={{color:"#999",fontSize:14}}>Loading…</div>
-    </div>
-  );
-  if(!me) return <Login onLogin={setMe}/>;
-
-  const showNav = view!=="add" && view!=="detail";
-
+  if(loading) return React.createElement('div',{style:{background:"#0f0c08",height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}},React.createElement('div',{style:{fontSize:64}},"🍺"),React.createElement('p',{style:{color:"#c8a96e",marginTop:16}},"Loading…"));
+  if(!me) return <Login onLogin={setMe} />;
   return (
-    <div style={{background:"#f7f5f2",minHeight:"100vh",maxWidth:480,margin:"0 auto",display:"flex",flexDirection:"column"}}>
-      {/* Header */}
-      <header style={{background:"#fff",borderBottom:"1px solid #f0ede8",padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:20,boxShadow:"0 1px 8px rgba(0,0,0,.04)"}}>
-        <span style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"#1a1a1a",letterSpacing:"-0.5px"}}>HopLog 🍺</span>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <Avatar user={me} size={32}/>
-          <button onClick={()=>setMe(null)} style={{background:"none",border:"1px solid #e5e7eb",color:"#888",borderRadius:8,padding:"4px 10px",fontSize:12,cursor:"pointer"}}>Sign out</button>
+    <div style={{background:"#0f0c08",minHeight:"100vh",display:"flex",flexDirection:"column"}}>
+      <header style={{background:"#13100c",borderBottom:"1px solid #2e2418",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:10}}>
+        <span style={{color:"#c8a96e",fontSize:20,fontWeight:"bold"}}>🍺 HopLog</span>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:22}}>{me.avatar}</span>
+          <span style={{color:"#e8d5a3",fontSize:14}}>{me.username}</span>
+          <button onClick={()=>setMe(null)} style={{background:"transparent",border:"1px solid #2e2418",color:"#888",borderRadius:6,padding:"3px 8px",fontSize:12,cursor:"pointer"}}>Out</button>
         </div>
       </header>
-
-      <main style={{flex:1,overflowY:"auto",paddingBottom:88}}>
-        {view==="feed"     && <Feed breweries={breweries} me={me} onSelect={b=>{setSelected(b);setView("detail");}}/>}
-        {view==="add"      && <AddBrewery me={me} onSave={b=>{save([b,...breweries]);setView("feed");}} onCancel={()=>setView("feed")}/>}
-        {view==="mybeers"  && <MyBeers breweries={breweries} me={me}/>}
-        {view==="detail"   && selected && <Detail brewery={breweries.find(b=>b.id===selected.id)||selected} me={me} onUpdate={u=>{save(breweries.map(b=>b.id===u.id?u:b));setSelected(u);}} onBack={()=>setView("feed")}/>}
+      <main style={{flex:1,overflowY:"auto",paddingBottom:80}}>
+        {view==="feed" && <Feed breweries={breweries} me={me} onSelect={b=>{setSelected(b);setView("detail");}} />}
+        {view==="add" && <AddBrewery me={me} onSave={b=>{save([b,...breweries]);setView("feed");}} onCancel={()=>setView("feed")} />}
+        {view==="detail" && selected && <Detail brewery={breweries.find(b=>b.id===selected.id)||selected} me={me} onUpdate={u=>{save(breweries.map(b=>b.id===u.id?u:b));setSelected(u);}} onBack={()=>setView("feed")} />}
       </main>
-
-      {/* Bottom Nav */}
-      {showNav && (
-        <nav style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:"#fff",borderTop:"1px solid #f0ede8",display:"flex",alignItems:"center",justifyContent:"space-around",height:68,zIndex:20,boxShadow:"0 -4px 20px rgba(0,0,0,.06)"}}>
-          <button onClick={()=>setView("feed")} style={{background:"none",border:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",flex:1,color:view==="feed"?"#e8845c":"#bbb",fontSize:10,fontWeight:500}}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            Breweries
-          </button>
-          <button onClick={()=>setView("add")} style={{background:"#e8845c",border:"none",borderRadius:20,width:56,height:56,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",boxShadow:"0 4px 16px rgba(232,132,92,.4)",marginBottom:20,color:"#fff",fontSize:28,fontWeight:300}}>＋</button>
-          <button onClick={()=>setView("mybeers")} style={{background:"none",border:"none",display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"pointer",flex:1,color:view==="mybeers"?"#e8845c":"#bbb",fontSize:10,fontWeight:500}}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 11l1.5 7H5.5L7 11"/><path d="M7 11V6a5 5 0 0 1 10 0v5"/><line x1="12" y1="6" x2="12" y2="11"/></svg>
-            My Beers
-          </button>
+      {(view==="feed"||view==="add") && (
+        <nav style={{position:"fixed",bottom:0,left:0,right:0,background:"#13100c",borderTop:"1px solid #2e2418",display:"flex",alignItems:"center",justifyContent:"space-around",height:60,zIndex:10}}>
+          <button onClick={()=>setView("feed")} style={{background:"transparent",border:"none",color:view==="feed"?"#c8a96e":"#666",display:"flex",flexDirection:"column",alignItems:"center",cursor:"pointer",flex:1,gap:2,fontSize:11}}><span style={{fontSize:22}}>🗺</span>Breweries</button>
+          <button onClick={()=>setView("add")} style={{background:"#c8a96e",color:"#0f0c08",border:"none",borderRadius:"50%",width:52,height:52,fontSize:26,cursor:"pointer",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"center"}}>＋</button>
+          <button disabled style={{background:"transparent",border:"none",color:"#444",display:"flex",flexDirection:"column",alignItems:"center",flex:1,gap:2,fontSize:11}}><span style={{fontSize:22}}>📊</span>Stats</button>
         </nav>
       )}
     </div>
   );
 }
-
-// ── My Beers ──────────────────────────────────────────────────────────────────
-function MyBeers({breweries, me}){
-  const [filter,setFilter]=useState("all"); // all | 5 | 4 | 3
-
-  // Collect all beers I rated, with brewery info attached
-  const myBeers = breweries.flatMap(brewery =>
-    (brewery.beers||[]).flatMap(beer => {
-      const myRating = (beer.ratings||[]).find(r=>r.userId===me.id);
-      if(!myRating) return [];
-      return [{...beer, myRating, breweryName: brewery.name, breweryCity: brewery.city, breweryState: brewery.state, breweryPhoto: brewery.photo}];
-    })
-  ).filter(b => filter==="all" || b.myRating.score === parseInt(filter))
-   .sort((a,b) => b.myRating.score - a.myRating.score || new Date(b.myRating.date) - new Date(a.myRating.date));
-
-  const total = breweries.flatMap(b=>(b.beers||[]).flatMap(beer=>(beer.ratings||[]).filter(r=>r.userId===me.id))).length;
-  const topScore = myBeers.length ? myBeers[0].myRating.score : 0;
-  const avgAll = myBeers.length ? (myBeers.reduce((s,b)=>s+b.myRating.score,0)/myBeers.length).toFixed(1) : "-";
-
-  return (
-    <div style={{padding:"20px 16px"}} className="fade-in">
-      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:22,color:"#1a1a1a",marginBottom:4}}>My Beer Journal</h2>
-      <p style={{color:"#999",fontSize:13,marginBottom:20}}>Beers you've personally rated</p>
-
-      {/* Stats row */}
-      <div style={{display:"flex",gap:10,marginBottom:20}}>
-        {[["🍺",total,"Beers rated"],["⭐",avgAll,"Avg rating"],["🏆",topScore > 0 ? topScore+"/5" : "-","Top score"]].map(([icon,val,label])=>(
-          <div key={label} style={{flex:1,background:"#fff",borderRadius:14,padding:"12px 10px",textAlign:"center",boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
-            <div style={{fontSize:20,marginBottom:4}}>{icon}</div>
-            <div style={{fontWeight:700,fontSize:18,color:"#1a1a1a"}}>{val}</div>
-            <div style={{fontSize:11,color:"#bbb",marginTop:2}}>{label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filter pills */}
-      <div style={{display:"flex",gap:8,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
-        {[["all","All"],["5","★★★★★"],["4","★★★★"],["3","★★★"],["2","★★"],["1","★"]].map(([val,label])=>(
-          <button key={val} onClick={()=>setFilter(val)}
-            style={{background:filter===val?"#e8845c":"#fff",border:filter===val?"none":"1px solid #f0ede8",color:filter===val?"#fff":"#888",borderRadius:20,padding:"6px 14px",fontSize:12,fontWeight:500,cursor:"pointer",whiteSpace:"nowrap",boxShadow:filter===val?"0 2px 8px rgba(232,132,92,.3)":"none"}}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {myBeers.length===0 && (
-        <div style={{textAlign:"center",padding:"48px 20px"}}>
-          <div style={{fontSize:48,marginBottom:12}}>🍺</div>
-          <p style={{color:"#999",fontSize:15}}>No rated beers yet.</p>
-          <p style={{color:"#bbb",fontSize:13,marginTop:4}}>Go to a brewery and rate some beers!</p>
-        </div>
-      )}
-
-      {myBeers.map(beer=>(
-        <div key={beer.id} style={{background:"#fff",borderRadius:16,padding:"14px 16px",marginBottom:10,boxShadow:"0 2px 8px rgba(0,0,0,.05)",display:"flex",alignItems:"center",gap:14}}>
-          {/* Score badge */}
-          <div style={{width:48,height:48,borderRadius:14,background: beer.myRating.score>=4?"#fef3c7":beer.myRating.score===3?"#f3f4f6":"#fff5f5",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            <div style={{fontSize:18,fontWeight:700,color:beer.myRating.score>=4?"#d97706":beer.myRating.score===3?"#888":"#ef4444",lineHeight:1}}>{beer.myRating.score}</div>
-            <div style={{fontSize:9,color:"#bbb",marginTop:1}}>/ 5</div>
-          </div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontWeight:600,fontSize:15,color:"#1a1a1a",marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{beer.name}</div>
-            <div style={{color:"#bbb",fontSize:12,marginBottom:4}}>{[beer.style, beer.abv?"ABV "+beer.abv+"%":null].filter(Boolean).join(" · ")}</div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <Stars score={beer.myRating.score} size={11}/>
-              <span style={{fontSize:11,color:"#bbb"}}>· {beer.breweryName}</span>
-            </div>
-            {beer.myRating.note && <p style={{fontSize:12,color:"#999",fontStyle:"italic",marginTop:4}}>"{beer.myRating.note}"</p>}
-          </div>
-          <div style={{fontSize:11,color:"#ccc",flexShrink:0,textAlign:"right"}}>
-            {fmtDate(beer.myRating.date)}
-          </div>
-        </div>
-      ))}
-      <div style={{height:20}}/>
-    </div>
-  );
-}
-
-
 function Login({onLogin}){
   const [user,setUser]=useState(""); const [pass,setPass]=useState(""); const [err,setErr]=useState("");
-  const submit=()=>{ const f=USERS.find(u=>u.username===user.trim().toLowerCase()&&u.password===pass); if(f){setErr("");onLogin(f);}else setErr("Wrong username or password."); };
+  const submit=()=>{ const f=SEED_USERS.find(u=>u.username===user.trim().toLowerCase()&&u.password===pass); if(f){setErr("");onLogin(f);}else setErr("Wrong username or password."); };
+  const inp={width:"100%",background:"#201a12",border:"1px solid #2e2418",borderRadius:8,padding:"10px 12px",color:"#ddd",fontSize:15,outline:"none",marginBottom:12};
   return (
-    <div style={{minHeight:"100vh",background:"#f7f5f2",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
-      <div className="fade-in" style={{background:"#fff",borderRadius:24,padding:"40px 32px",width:"100%",maxWidth:380,boxShadow:"0 8px 40px rgba(0,0,0,.08)"}}>
-        <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{fontSize:52,marginBottom:12}}>🍺</div>
-          <h1 style={{fontFamily:"'Playfair Display',serif",fontSize:30,color:"#1a1a1a",marginBottom:6}}>HopLog</h1>
-          <p style={{color:"#999",fontSize:14}}>Your crew's brewery journal</p>
-        </div>
-        <div style={{marginBottom:16}}>
-          <label style={{display:"block",fontSize:13,fontWeight:500,color:"#555",marginBottom:6}}>Username</label>
-          <input value={user} onChange={e=>setUser(e.target.value)} placeholder="hophavoc" autoCapitalize="none"
-            style={{width:"100%",border:"1.5px solid #f0ede8",borderRadius:12,padding:"12px 14px",fontSize:15,outline:"none",background:"#fafafa",transition:"border .2s"}}
-            onFocus={e=>e.target.style.borderColor="#e8845c"} onBlur={e=>e.target.style.borderColor="#f0ede8"}/>
-        </div>
-        <div style={{marginBottom:8}}>
-          <label style={{display:"block",fontSize:13,fontWeight:500,color:"#555",marginBottom:6}}>Password</label>
-          <input type="password" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="••••••••"
-            style={{width:"100%",border:"1.5px solid #f0ede8",borderRadius:12,padding:"12px 14px",fontSize:15,outline:"none",background:"#fafafa"}}
-            onFocus={e=>e.target.style.borderColor="#e8845c"} onBlur={e=>e.target.style.borderColor="#f0ede8"}/>
-        </div>
-        {err && <p style={{color:"#ef4444",fontSize:13,marginBottom:8,textAlign:"center"}}>{err}</p>}
-        <button onClick={submit} style={{width:"100%",background:"#e8845c",color:"#fff",border:"none",borderRadius:12,padding:"14px 0",fontSize:15,fontWeight:600,cursor:"pointer",marginTop:8,boxShadow:"0 4px 16px rgba(232,132,92,.3)"}}>Sign In</button>
-        <p style={{color:"#bbb",fontSize:11,textAlign:"center",marginTop:20}}>hophavoc · ruiamaro</p>
+    <div style={{background:"#0f0c08",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"#1a1510",border:"1px solid #2e2418",borderRadius:16,padding:"32px 24px",width:"100%",maxWidth:380}}>
+        <div style={{fontSize:56,textAlign:"center",marginBottom:8}}>🍺</div>
+        <h1 style={{color:"#e8d5a3",fontSize:32,textAlign:"center",margin:"0 0 4px"}}>HopLog</h1>
+        <p style={{color:"#888",textAlign:"center",fontSize:14,marginBottom:24}}>Your crew's brewery journal</p>
+        <label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:5}}>Username</label>
+        <input value={user} onChange={e=>setUser(e.target.value)} placeholder="hophavoc" autoCapitalize="none" style={inp} />
+        <label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:5}}>Password</label>
+        <input type="password" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="••••••••" style={inp} />
+        {err && <p style={{color:"#e07070",fontSize:13,textAlign:"center",marginBottom:8}}>{err}</p>}
+        <button onClick={submit} style={{width:"100%",background:"#c8a96e",color:"#0f0c08",border:"none",borderRadius:10,padding:"12px 0",fontSize:15,fontWeight:"bold",cursor:"pointer"}}>Sign In</button>
+        <p style={{color:"#555",fontSize:11,textAlign:"center",marginTop:16}}>Accounts: hophavoc · ruiamaro</p>
       </div>
     </div>
   );
 }
-
-// ── Feed ──────────────────────────────────────────────────────────────────────
 function Feed({breweries,me,onSelect}){
   const [search,setSearch]=useState("");
   const filtered=breweries.filter(b=>b.name.toLowerCase().includes(search.toLowerCase())||(b.city||"").toLowerCase().includes(search.toLowerCase()));
   return (
-    <div style={{padding:"20px 16px"}} className="fade-in">
-      {/* Search */}
-      <div style={{position:"relative",marginBottom:20}}>
-        <svg style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"#bbb"}} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search breweries…"
-          style={{width:"100%",background:"#fff",border:"1.5px solid #f0ede8",borderRadius:14,padding:"12px 14px 12px 40px",fontSize:14,outline:"none",boxShadow:"0 2px 8px rgba(0,0,0,.04)"}}
-          onFocus={e=>e.target.style.borderColor="#e8845c"} onBlur={e=>e.target.style.borderColor="#f0ede8"}/>
-      </div>
-
-      {filtered.length===0 && (
-        <div style={{textAlign:"center",padding:"60px 20px"}}>
-          <div style={{fontSize:52,marginBottom:12}}>🏭</div>
-          <p style={{color:"#999",fontSize:15}}>No breweries yet.</p>
-          <p style={{color:"#bbb",fontSize:13,marginTop:4}}>Tap + to add your first one!</p>
-        </div>
-      )}
-
+    <div style={{padding:16}}>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search breweries…" style={{width:"100%",background:"#1a1510",border:"1px solid #2e2418",borderRadius:10,padding:"10px 14px",color:"#ddd",fontSize:15,marginBottom:16,outline:"none"}} />
+      {filtered.length===0 && <div style={{textAlign:"center",padding:"60px 20px"}}><p style={{fontSize:48}}>🏭</p><p style={{color:"#c8a96e",marginTop:8}}>No breweries yet.<br/>Tap ＋ to add one!</p></div>}
       {filtered.map(b=>{
-        const ratings=(b.beers||[]).flatMap(beer=>(beer.ratings||[]).map(r=>r.score));
-        const ov=avg(ratings); const ci=(b.checkins||[]).some(c=>c.userId===me.id);
+        const ratings=(b.beers||[]).flatMap(beer=>(beer.ratings||[]).map(r=>r.score)); const ov=avg(ratings); const ci=(b.checkins||[]).some(c=>c.userId===me.id); const bc=(b.beers||[]).length;
         return (
-          <div key={b.id} onClick={()=>onSelect(b)} className="fade-in"
-            style={{background:"#fff",borderRadius:20,marginBottom:14,cursor:"pointer",overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.06)",transition:"transform .15s,box-shadow .15s"}}
-            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 8px 24px rgba(0,0,0,.1)";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,.06)";}}>
-            {b.photo
-              ? <img src={b.photo} alt={b.name} style={{width:"100%",height:160,objectFit:"cover"}}/>
-              : <div style={{height:80,background:"linear-gradient(135deg,#fdf6ee,#fcecd8)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:36}}>🏭</div>
-            }
-            <div style={{padding:"14px 16px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                <div>
-                  <div style={{fontWeight:600,fontSize:16,color:"#1a1a1a",marginBottom:2}}>{b.name}</div>
-                  <div style={{color:"#999",fontSize:13}}>{[b.city,b.state].filter(Boolean).join(", ")}</div>
-                </div>
-                <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
-                  {ov && <div style={{background:"#fef3c7",color:"#d97706",fontSize:13,fontWeight:600,padding:"3px 8px",borderRadius:8}}>⭐ {ov}</div>}
-                  {ci && <div style={{background:"#d1fae5",color:"#059669",fontSize:11,fontWeight:500,padding:"2px 8px",borderRadius:8}}>✓ Visited</div>}
-                </div>
+          <div key={b.id} onClick={()=>onSelect(b)} style={{background:"#1a1510",border:"1px solid #2e2418",borderRadius:12,marginBottom:12,cursor:"pointer",overflow:"hidden"}}>
+            {b.photo && <img src={b.photo} alt={b.name} style={{width:"100%",height:140,objectFit:"cover"}} />}
+            <div style={{padding:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                <div><div style={{color:"#e8d5a3",fontSize:18,fontWeight:"bold"}}>{b.name}</div><div style={{color:"#888",fontSize:13,marginTop:2}}>{[b.city,b.state].filter(Boolean).join(", ")}</div></div>
+                <div style={{textAlign:"right"}}>{ov&&<div style={{color:"#c8a96e",fontSize:15,fontWeight:"bold"}}>⭐ {ov}</div>}{ci&&<div style={{background:"#1e3a1e",color:"#6fcf6f",fontSize:11,padding:"2px 7px",borderRadius:10,marginTop:4}}>✓ Visited</div>}</div>
               </div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
-                {b.style && <span style={{background:"#f3f4f6",color:"#666",fontSize:11,padding:"3px 8px",borderRadius:8,fontWeight:500}}>{b.style}</span>}
-                <span style={{background:"#f3f4f6",color:"#666",fontSize:11,padding:"3px 8px",borderRadius:8}}>🍺 {(b.beers||[]).length} beers</span>
-                <span style={{background:"#f3f4f6",color:"#666",fontSize:11,padding:"3px 8px",borderRadius:8}}>👥 {(b.checkins||[]).length} visits</span>
-                {b.lat&&b.lng&&<span style={{background:"#f3f4f6",color:"#666",fontSize:11,padding:"3px 8px",borderRadius:8}}>📍 Map</span>}
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {[`🍺 ${bc} beer${bc!==1?"s":""}`,`👥 ${(b.checkins||[]).length} check-in${(b.checkins||[]).length!==1?"s":""}`,b.style&&`🏷 ${b.style}`,b.lat&&b.lng&&"📍 Has location"].filter(Boolean).map((t,i)=>(
+                  <span key={i} style={{background:"#201a12",color:"#999",fontSize:11,padding:"3px 8px",borderRadius:8}}>{t}</span>
+                ))}
               </div>
             </div>
           </div>
@@ -280,14 +110,53 @@ function Feed({breweries,me,onSelect}){
     </div>
   );
 }
-
-// ── Add Brewery ───────────────────────────────────────────────────────────────
-function AddBrewery({me,onSave,onCancel}){
-  const [form,setForm]=useState({name:"",city:"",state:"",style:"",notes:""});
-  const [photo,setPhoto]=useState(null); const [lat,setLat]=useState(""); const [lng,setLng]=useState("");
-  const [gpsMsg,setGpsMsg]=useState(""); const [locMode,setLocMode]=useState("gps");
-  const fileRef=useRef(); const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-
-  const pickPhoto=async e=>{ const file=e.target.files[0]; if(!file)return; const img=new Image(); img.onload=()=>{ const MAX=800,s=Math.min(1,MAX/Math.max(img.width,img.height)),c=document.createElement("canvas"); c.width=img.width*s; c.height=img.height*s; c.getContext("2d").drawImage(img,0,0,c.width,c.height); setPhoto(c.toDataURL("image/jpeg",.75)); }; img.src=await toBase64(file); };
-  const getGPS=()=>{ setGpsMsg("Getting location…"); navigator.geolocation.getCurrentPosition(p=>{setLat(p.coords.latitude.toFixed(6));setLng(p.coords.longitude.toFixed(6));setGpsMsg("✓ Got it!");},()=>setGpsMsg("Could not get location.")); };
-  const save=()=>{ if(!form.name.trim())return; onSave({id:Date.now().toString(),...form,photo:photo||null,lat:lat?parseFloat(lat):null,lng:lng?parseFloat(lng):null,a
+function Login({onLogin}){
+  const [user,setUser]=useState(""); const [pass,setPass]=useState(""); const [err,setErr]=useState("");
+  const submit=()=>{ const f=SEED_USERS.find(u=>u.username===user.trim().toLowerCase()&&u.password===pass); if(f){setErr("");onLogin(f);}else setErr("Wrong username or password."); };
+  const inp={width:"100%",background:"#201a12",border:"1px solid #2e2418",borderRadius:8,padding:"10px 12px",color:"#ddd",fontSize:15,outline:"none",marginBottom:12};
+  return (
+    <div style={{background:"#0f0c08",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"#1a1510",border:"1px solid #2e2418",borderRadius:16,padding:"32px 24px",width:"100%",maxWidth:380}}>
+        <div style={{fontSize:56,textAlign:"center",marginBottom:8}}>🍺</div>
+        <h1 style={{color:"#e8d5a3",fontSize:32,textAlign:"center",margin:"0 0 4px"}}>HopLog</h1>
+        <p style={{color:"#888",textAlign:"center",fontSize:14,marginBottom:24}}>Your crew's brewery journal</p>
+        <label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:5}}>Username</label>
+        <input value={user} onChange={e=>setUser(e.target.value)} placeholder="hophavoc" autoCapitalize="none" style={inp} />
+        <label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:5}}>Password</label>
+        <input type="password" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="••••••••" style={inp} />
+        {err && <p style={{color:"#e07070",fontSize:13,textAlign:"center",marginBottom:8}}>{err}</p>}
+        <button onClick={submit} style={{width:"100%",background:"#c8a96e",color:"#0f0c08",border:"none",borderRadius:10,padding:"12px 0",fontSize:15,fontWeight:"bold",cursor:"pointer"}}>Sign In</button>
+        <p style={{color:"#555",fontSize:11,textAlign:"center",marginTop:16}}>Accounts: hophavoc · ruiamaro</p>
+      </div>
+    </div>
+  );
+}
+function Feed({breweries,me,onSelect}){
+  const [search,setSearch]=useState("");
+  const filtered=breweries.filter(b=>b.name.toLowerCase().includes(search.toLowerCase())||(b.city||"").toLowerCase().includes(search.toLowerCase()));
+  return (
+    <div style={{padding:16}}>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search breweries…" style={{width:"100%",background:"#1a1510",border:"1px solid #2e2418",borderRadius:10,padding:"10px 14px",color:"#ddd",fontSize:15,marginBottom:16,outline:"none"}} />
+      {filtered.length===0 && <div style={{textAlign:"center",padding:"60px 20px"}}><p style={{fontSize:48}}>🏭</p><p style={{color:"#c8a96e",marginTop:8}}>No breweries yet.<br/>Tap ＋ to add one!</p></div>}
+      {filtered.map(b=>{
+        const ratings=(b.beers||[]).flatMap(beer=>(beer.ratings||[]).map(r=>r.score)); const ov=avg(ratings); const ci=(b.checkins||[]).some(c=>c.userId===me.id); const bc=(b.beers||[]).length;
+        return (
+          <div key={b.id} onClick={()=>onSelect(b)} style={{background:"#1a1510",border:"1px solid #2e2418",borderRadius:12,marginBottom:12,cursor:"pointer",overflow:"hidden"}}>
+            {b.photo && <img src={b.photo} alt={b.name} style={{width:"100%",height:140,objectFit:"cover"}} />}
+            <div style={{padding:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                <div><div style={{color:"#e8d5a3",fontSize:18,fontWeight:"bold"}}>{b.name}</div><div style={{color:"#888",fontSize:13,marginTop:2}}>{[b.city,b.state].filter(Boolean).join(", ")}</div></div>
+                <div style={{textAlign:"right"}}>{ov&&<div style={{color:"#c8a96e",fontSize:15,fontWeight:"bold"}}>⭐ {ov}</div>}{ci&&<div style={{background:"#1e3a1e",color:"#6fcf6f",fontSize:11,padding:"2px 7px",borderRadius:10,marginTop:4}}>✓ Visited</div>}</div>
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {[`🍺 ${bc} beer${bc!==1?"s":""}`,`👥 ${(b.checkins||[]).length} check-in${(b.checkins||[]).length!==1?"s":""}`,b.style&&`🏷 ${b.style}`,b.lat&&b.lng&&"📍 Has location"].filter(Boolean).map((t,i)=>(
+                  <span key={i} style={{background:"#201a12",color:"#999",fontSize:11,padding:"3px 8px",borderRadius:8}}>{t}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
