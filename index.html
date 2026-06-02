@@ -110,53 +110,110 @@ function Feed({breweries,me,onSelect}){
     </div>
   );
 }
-function Login({onLogin}){
-  const [user,setUser]=useState(""); const [pass,setPass]=useState(""); const [err,setErr]=useState("");
-  const submit=()=>{ const f=SEED_USERS.find(u=>u.username===user.trim().toLowerCase()&&u.password===pass); if(f){setErr("");onLogin(f);}else setErr("Wrong username or password."); };
-  const inp={width:"100%",background:"#201a12",border:"1px solid #2e2418",borderRadius:8,padding:"10px 12px",color:"#ddd",fontSize:15,outline:"none",marginBottom:12};
-  return (
-    <div style={{background:"#0f0c08",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div style={{background:"#1a1510",border:"1px solid #2e2418",borderRadius:16,padding:"32px 24px",width:"100%",maxWidth:380}}>
-        <div style={{fontSize:56,textAlign:"center",marginBottom:8}}>🍺</div>
-        <h1 style={{color:"#e8d5a3",fontSize:32,textAlign:"center",margin:"0 0 4px"}}>HopLog</h1>
-        <p style={{color:"#888",textAlign:"center",fontSize:14,marginBottom:24}}>Your crew's brewery journal</p>
-        <label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:5}}>Username</label>
-        <input value={user} onChange={e=>setUser(e.target.value)} placeholder="hophavoc" autoCapitalize="none" style={inp} />
-        <label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:5}}>Password</label>
-        <input type="password" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="••••••••" style={inp} />
-        {err && <p style={{color:"#e07070",fontSize:13,textAlign:"center",marginBottom:8}}>{err}</p>}
-        <button onClick={submit} style={{width:"100%",background:"#c8a96e",color:"#0f0c08",border:"none",borderRadius:10,padding:"12px 0",fontSize:15,fontWeight:"bold",cursor:"pointer"}}>Sign In</button>
-        <p style={{color:"#555",fontSize:11,textAlign:"center",marginTop:16}}>Accounts: hophavoc · ruiamaro</p>
-      </div>
-    </div>
-  );
-}
-function Feed({breweries,me,onSelect}){
-  const [search,setSearch]=useState("");
-  const filtered=breweries.filter(b=>b.name.toLowerCase().includes(search.toLowerCase())||(b.city||"").toLowerCase().includes(search.toLowerCase()));
+function AddBrewery({me,onSave,onCancel}){
+  const [form,setForm]=useState({name:"",city:"",state:"",style:"",notes:""}); const [photo,setPhoto]=useState(null); const [lat,setLat]=useState(""); const [lng,setLng]=useState(""); const [gpsMsg,setGpsMsg]=useState(""); const [locMode,setLocMode]=useState("gps");
+  const fileRef=useRef(); const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const pickPhoto=async e=>{ const file=e.target.files[0]; if(!file)return; const img=new Image(); img.onload=()=>{ const MAX=800,scale=Math.min(1,MAX/Math.max(img.width,img.height)),canvas=document.createElement("canvas"); canvas.width=img.width*scale; canvas.height=img.height*scale; canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height); setPhoto(canvas.toDataURL("image/jpeg",.7)); }; img.src=await toBase64(file); };
+  const getGPS=()=>{ setGpsMsg("Getting location…"); navigator.geolocation.getCurrentPosition(p=>{setLat(p.coords.latitude.toFixed(6));setLng(p.coords.longitude.toFixed(6));setGpsMsg("✓ Location captured!");},()=>setGpsMsg("Could not get location. Try manual.")); };
+  const save=()=>{ if(!form.name.trim())return; onSave({id:Date.now().toString(),...form,photo:photo||null,lat:lat?parseFloat(lat):null,lng:lng?parseFloat(lng):null,addedBy:me.id,addedAt:new Date().toISOString(),beers:[],checkins:[],comments:[]}); };
+  const inp={width:"100%",background:"#201a12",border:"1px solid #2e2418",borderRadius:8,padding:"10px 12px",color:"#ddd",fontSize:15,outline:"none"};
   return (
     <div style={{padding:16}}>
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search breweries…" style={{width:"100%",background:"#1a1510",border:"1px solid #2e2418",borderRadius:10,padding:"10px 14px",color:"#ddd",fontSize:15,marginBottom:16,outline:"none"}} />
-      {filtered.length===0 && <div style={{textAlign:"center",padding:"60px 20px"}}><p style={{fontSize:48}}>🏭</p><p style={{color:"#c8a96e",marginTop:8}}>No breweries yet.<br/>Tap ＋ to add one!</p></div>}
-      {filtered.map(b=>{
-        const ratings=(b.beers||[]).flatMap(beer=>(beer.ratings||[]).map(r=>r.score)); const ov=avg(ratings); const ci=(b.checkins||[]).some(c=>c.userId===me.id); const bc=(b.beers||[]).length;
-        return (
-          <div key={b.id} onClick={()=>onSelect(b)} style={{background:"#1a1510",border:"1px solid #2e2418",borderRadius:12,marginBottom:12,cursor:"pointer",overflow:"hidden"}}>
-            {b.photo && <img src={b.photo} alt={b.name} style={{width:"100%",height:140,objectFit:"cover"}} />}
-            <div style={{padding:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                <div><div style={{color:"#e8d5a3",fontSize:18,fontWeight:"bold"}}>{b.name}</div><div style={{color:"#888",fontSize:13,marginTop:2}}>{[b.city,b.state].filter(Boolean).join(", ")}</div></div>
-                <div style={{textAlign:"right"}}>{ov&&<div style={{color:"#c8a96e",fontSize:15,fontWeight:"bold"}}>⭐ {ov}</div>}{ci&&<div style={{background:"#1e3a1e",color:"#6fcf6f",fontSize:11,padding:"2px 7px",borderRadius:10,marginTop:4}}>✓ Visited</div>}</div>
-              </div>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {[`🍺 ${bc} beer${bc!==1?"s":""}`,`👥 ${(b.checkins||[]).length} check-in${(b.checkins||[]).length!==1?"s":""}`,b.style&&`🏷 ${b.style}`,b.lat&&b.lng&&"📍 Has location"].filter(Boolean).map((t,i)=>(
-                  <span key={i} style={{background:"#201a12",color:"#999",fontSize:11,padding:"3px 8px",borderRadius:8}}>{t}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      })}
+      <h2 style={{color:"#e8d5a3",fontSize:24,marginBottom:16}}>Add Brewery</h2>
+      <div style={{marginBottom:14}}>
+        <label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:5}}>📸 Photo</label>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={pickPhoto} />
+        {photo?<div style={{position:"relative"}}><img src={photo} alt="preview" style={{width:"100%",borderRadius:10,maxHeight:180,objectFit:"cover"}} /><button onClick={()=>setPhoto(null)} style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,.6)",color:"#fff",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer"}}>✕</button></div>
+          :<button onClick={()=>fileRef.current.click()} style={{width:"100%",background:"#201a12",border:"2px dashed #2e2418",borderRadius:10,padding:"24px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer"}}><span style={{fontSize:28}}>📷</span><span style={{fontSize:13,color:"#888"}}>Tap to add photo</span></button>}
+      </div>
+      {[["name","Brewery Name *","e.g. Dogfish Head"],["city","City","e.g. Milton"],["state","State","e.g. DE"],["style","Style","e.g. Craft"]].map(([k,label,ph])=>(
+        <div key={k} style={{marginBottom:14}}><label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:5}}>{label}</label><input style={inp} value={form[k]} onChange={e=>set(k,e.target.value)} placeholder={ph} /></div>
+      ))}
+      <div style={{marginBottom:14}}>
+        <label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:5}}>📍 Location</label>
+        <div style={{display:"flex",gap:8,marginBottom:8}}>{["gps","manual"].map(m=><button key={m} onClick={()=>setLocMode(m)} style={{flex:1,background:locMode===m?"#2a1f10":"#201a12",border:locMode===m?"1px solid #c8a96e":"1px solid #2e2418",color:locMode===m?"#c8a96e":"#888",borderRadius:8,padding:"8px 0",fontSize:13,cursor:"pointer"}}>{m==="gps"?"Use GPS":"Manual"}</button>)}</div>
+        {locMode==="gps"&&<div><button onClick={getGPS} style={{width:"100%",background:"transparent",border:"1px dashed #c8a96e",color:"#c8a96e",borderRadius:10,padding:"10px 0",fontSize:14,cursor:"pointer",marginBottom:6}}>📡 Get My Location</button>{gpsMsg&&<p style={{color:gpsMsg.startsWith("✓")?"#6fcf6f":"#e07070",fontSize:13}}>{gpsMsg}</p>}{lat&&lng&&<p style={{color:"#888",fontSize:12,marginTop:4}}>Lat: {lat}, Lng: {lng}</p>}</div>}
+        {locMode==="manual"&&<div style={{display:"flex",gap:8}}><div style={{flex:1}}><label style={{display:"block",color:"#c8a96e",fontSize:11,marginBottom:4}}>Latitude</label><input style={inp} value={lat} onChange={e=>setLat(e.target.value)} placeholder="38.9072" /></div><div style={{flex:1}}><label style={{display:"block",color:"#c8a96e",fontSize:11,marginBottom:4}}>Longitude</label><input style={inp} value={lng} onChange={e=>setLng(e.target.value)} placeholder="-77.0369" /></div></div>}
+      </div>
+      <div style={{marginBottom:14}}><label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:5}}>Notes</label><textarea style={{...inp,height:80,resize:"none"}} value={form.notes} onChange={e=>set("notes",e.target.value)} placeholder="Vibe, food, parking…" /></div>
+      <div style={{display:"flex",gap:10}}><button onClick={onCancel} style={{flex:1,background:"transparent",color:"#888",border:"1px solid #2e2418",borderRadius:10,padding:"12px 0",fontSize:15,cursor:"pointer"}}>Cancel</button><button onClick={save} style={{flex:1,background:"#c8a96e",color:"#0f0c08",border:"none",borderRadius:10,padding:"12px 0",fontSize:15,fontWeight:"bold",cursor:"pointer"}}>Save Brewery</button></div>
+      <div style={{height:20}} />
     </div>
   );
 }
+function Detail({brewery:b,me,onUpdate,onBack}){
+  const [tab,setTab]=useState("beers"); const [addingBeer,setAddingBeer]=useState(false); const [comment,setComment]=useState("");
+  const photoRef=useRef(); const checkedIn=(b.checkins||[]).some(c=>c.userId===me.id);
+  const checkIn=()=>{ if(checkedIn)return; onUpdate({...b,checkins:[...(b.checkins||[]),{userId:me.id,username:me.username,avatar:me.avatar,date:new Date().toISOString()}]}); };
+  const addBeer=beer=>{ onUpdate({...b,beers:[...(b.beers||[]),beer]}); setAddingBeer(false); };
+  const rateBeer=(beerId,score,note)=>{ const beers=(b.beers||[]).map(beer=>{ if(beer.id!==beerId)return beer; return{...beer,ratings:[...(beer.ratings||[]).filter(r=>r.userId!==me.id),{userId:me.id,username:me.username,score,note,date:new Date().toISOString()}]}; }); onUpdate({...b,beers}); };
+  const postComment=()=>{ if(!comment.trim())return; onUpdate({...b,comments:[...(b.comments||[]),{id:Date.now().toString(),userId:me.id,username:me.username,avatar:me.avatar,text:comment.trim(),date:new Date().toISOString()}]}); setComment(""); };
+  const changePhoto=async e=>{ const file=e.target.files[0]; if(!file)return; const img=new Image(); img.onload=()=>{ const MAX=800,scale=Math.min(1,MAX/Math.max(img.width,img.height)),canvas=document.createElement("canvas"); canvas.width=img.width*scale; canvas.height=img.height*scale; canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height); onUpdate({...b,photo:canvas.toDataURL("image/jpeg",.7)}); }; img.src=await toBase64(file); };
+  const mapsUrl=b.lat&&b.lng?`https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}`:b.name&&b.city?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.name+" "+b.city)}`:null;
+  const ratings=(b.beers||[]).flatMap(beer=>(beer.ratings||[]).map(r=>r.score)); const ov=avg(ratings);
+  const inp={width:"100%",background:"#201a12",border:"1px solid #2e2418",borderRadius:8,padding:"10px 12px",color:"#ddd",fontSize:15,outline:"none"};
+  return (
+    <div style={{padding:16}}>
+      <button onClick={onBack} style={{background:"transparent",border:"none",color:"#c8a96e",fontSize:15,cursor:"pointer",padding:"0 0 12px",display:"block"}}>← Back</button>
+      <div style={{position:"relative",marginBottom:16}}>
+        {b.photo?<img src={b.photo} alt={b.name} style={{width:"100%",height:200,objectFit:"cover",borderRadius:12}} />:<div style={{width:"100%",height:160,background:"#201a12",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:56}}>🏭</div>}
+        <button onClick={()=>photoRef.current.click()} style={{position:"absolute",bottom:10,right:10,background:"rgba(0,0,0,.7)",color:"#c8a96e",border:"1px solid #c8a96e",borderRadius:8,padding:"6px 12px",fontSize:13,cursor:"pointer"}}>📷 {b.photo?"Change":"Add"} Photo</button>
+        <input ref={photoRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={changePhoto} />
+      </div>
+      <h2 style={{color:"#e8d5a3",fontSize:26,margin:"0 0 4px"}}>{b.name}</h2>
+      <p style={{color:"#888",fontSize:14,marginBottom:8}}>{[b.city,b.state].filter(Boolean).join(", ")}</p>
+      {b.style&&<span style={{background:"#201a12",color:"#999",fontSize:11,padding:"3px 8px",borderRadius:8}}>{b.style}</span>}
+      {ov&&<div style={{color:"#c8a96e",fontSize:20,fontWeight:"bold",margin:"8px 0"}}>⭐ {ov} avg</div>}
+      {b.notes&&<p style={{color:"#aaa",fontSize:14,fontStyle:"italic",background:"#1a1510",borderLeft:"3px solid #2e2418",padding:"8px 12px",borderRadius:4,margin:"8px 0"}}>{b.notes}</p>}
+      {mapsUrl&&<a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={{display:"block",width:"100%",background:"#0d1f2d",border:"1px solid #1a4a6a",color:"#5bb8f5",borderRadius:10,padding:"12px 0",fontSize:15,textAlign:"center",textDecoration:"none",margin:"12px 0"}}>🗺 Open in Google Maps</a>}
+      {b.lat&&b.lng&&<p style={{color:"#555",fontSize:11,textAlign:"center",marginBottom:12}}>📍 {b.lat.toFixed(4)}, {b.lng.toFixed(4)}</p>}
+      <button onClick={checkIn} disabled={checkedIn} style={{width:"100%",background:checkedIn?"#1e3a1e":"#1e2e1e",border:"1px solid #3a6a3a",color:checkedIn?"#4caf4c":"#6fcf6f",borderRadius:10,padding:"12px 0",fontSize:15,cursor:checkedIn?"default":"pointer",marginBottom:16,opacity:checkedIn?.7:1}}>{checkedIn?"✓ You've been here!":"📍 Check In"}</button>
+      <div style={{display:"flex",gap:4,marginBottom:16,borderBottom:"1px solid #2e2418"}}>
+        {[["beers","🍺 Beers"],["checkins","📍 Check-ins"],["comments","💬 Comments"]].map(([k,label])=>(
+          <button key={k} onClick={()=>setTab(k)} style={{background:"transparent",border:"none",color:tab===k?"#c8a96e":"#666",fontSize:13,padding:"8px 12px",cursor:"pointer",borderBottom:tab===k?"2px solid #c8a96e":"2px solid transparent"}}>{label}</button>
+        ))}
+      </div>
+      {tab==="beers"&&<div>{!addingBeer&&<button onClick={()=>setAddingBeer(true)} style={{width:"100%",background:"transparent",border:"1px dashed #c8a96e",color:"#c8a96e",borderRadius:10,padding:"10px 0",fontSize:14,cursor:"pointer",marginBottom:14}}>+ Add Beer</button>}{addingBeer&&<AddBeer me={me} onSave={addBeer} onCancel={()=>setAddingBeer(false)} />}{(b.beers||[]).length===0&&!addingBeer&&<p style={{color:"#555",textAlign:"center",padding:"20px 0",fontSize:14}}>No beers logged yet.</p>}{(b.beers||[]).map(beer=><BeerCard key={beer.id} beer={beer} me={me} onRate={(s,n)=>rateBeer(beer.id,s,n)} />)}</div>}
+      {tab==="checkins"&&<div>{(b.checkins||[]).length===0&&<p style={{color:"#555",textAlign:"center",padding:"20px 0",fontSize:14}}>No check-ins yet.</p>}{(b.checkins||[]).map((c,i)=><div key={i} style={{display:"flex",gap:10,alignItems:"center",background:"#1a1510",border:"1px solid #2e2418",borderRadius:10,padding:12,marginBottom:8}}><span style={{fontSize:22}}>{c.avatar}</span><div><strong style={{color:"#e8d5a3"}}>{c.username}</strong><div style={{color:"#888",fontSize:12}}>{fmtDate(c.date)}</div></div><span style={{marginLeft:"auto",color:"#c8a96e",fontSize:13}}>📍 Visited</span></div>)}</div>}
+      {tab==="comments"&&<div><div style={{display:"flex",gap:8,alignItems:"flex-end",marginBottom:14}}><textarea style={{...inp,height:70,resize:"none",flex:1}} value={comment} onChange={e=>setComment(e.target.value)} placeholder="Leave a note…" /><button onClick={postComment} style={{background:"#c8a96e",color:"#0f0c08",border:"none",borderRadius:8,padding:"10px 16px",fontSize:14,cursor:"pointer",fontWeight:"bold"}}>Post</button></div>{(b.comments||[]).length===0&&<p style={{color:"#555",textAlign:"center",padding:"20px 0",fontSize:14}}>No comments yet.</p>}{[...(b.comments||[])].reverse().map(c=><div key={c.id} style={{display:"flex",gap:10,alignItems:"flex-start",background:"#1a1510",border:"1px solid #2e2418",borderRadius:10,padding:12,marginBottom:8}}><span style={{fontSize:22}}>{c.avatar}</span><div style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between"}}><strong style={{color:"#e8d5a3"}}>{c.username}</strong><span style={{color:"#666",fontSize:12}}>{fmtDate(c.date)}</span></div><p style={{margin:"4px 0 0",color:"#ccc",fontSize:14}}>{c.text}</p></div></div>)}</div>}
+      <div style={{height:20}} />
+    </div>
+  );
+}
+function AddBeer({me,onSave,onCancel}){
+  const [form,setForm]=useState({name:"",style:"",abv:""}); const [score,setScore]=useState(0); const [note,setNote]=useState("");
+  const inp={width:"100%",background:"#201a12",border:"1px solid #2e2418",borderRadius:8,padding:"10px 12px",color:"#ddd",fontSize:15,outline:"none"};
+  const save=()=>{ if(!form.name.trim())return; onSave({id:Date.now().toString(),...form,addedBy:me.id,addedAt:new Date().toISOString(),ratings:score>0?[{userId:me.id,username:me.username,score,note,date:new Date().toISOString()}]:[]}); };
+  return (
+    <div style={{background:"#1a1510",border:"1px solid #2e2418",borderRadius:12,padding:16,marginBottom:16}}>
+      <h3 style={{color:"#c8a96e",margin:"0 0 12px"}}>New Beer</h3>
+      {[["name","Beer Name *","e.g. Sixty Minute IPA"],["style","Style","e.g. IPA"],["abv","ABV %","e.g. 6.0"]].map(([k,label,ph])=>(
+        <div key={k} style={{marginBottom:12}}><label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:4}}>{label}</label><input style={inp} value={form[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={ph} /></div>
+      ))}
+      <label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:6}}>Your Rating</label>
+      <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:12}}>{[1,2,3,4,5].map(n=><button key={n} onClick={()=>setScore(n)} style={{background:"transparent",border:"none",fontSize:28,cursor:"pointer",padding:0,color:n<=score?"#f5c518":"#444"}}>★</button>)}{score>0&&<span style={{color:"#888",fontSize:13,marginLeft:6}}>{score}/5</span>}</div>
+      <div style={{marginBottom:12}}><label style={{display:"block",color:"#c8a96e",fontSize:13,marginBottom:4}}>Tasting Note</label><input style={inp} value={note} onChange={e=>setNote(e.target.value)} placeholder="Hoppy, citrusy…" /></div>
+      <div style={{display:"flex",gap:10}}><button onClick={onCancel} style={{flex:1,background:"transparent",color:"#888",border:"1px solid #2e2418",borderRadius:10,padding:"12px 0",fontSize:15,cursor:"pointer"}}>Cancel</button><button onClick={save} style={{flex:1,background:"#c8a96e",color:"#0f0c08",border:"none",borderRadius:10,padding:"12px 0",fontSize:15,fontWeight:"bold",cursor:"pointer"}}>Add Beer</button></div>
+    </div>
+  );
+}
+function BeerCard({beer,me,onRate}){
+  const [editing,setEditing]=useState(false); const [score,setScore]=useState(0); const [note,setNote]=useState("");
+  const myRating=(beer.ratings||[]).find(r=>r.userId===me.id); const allRatings=beer.ratings||[]; const avgScore=avg(allRatings.map(r=>r.score));
+  const inp={width:"100%",background:"#201a12",border:"1px solid #2e2418",borderRadius:8,padding:"10px 12px",color:"#ddd",fontSize:15,outline:"none"};
+  return (
+    <div style={{background:"#1a1510",border:"1px solid #2e2418",borderRadius:10,padding:14,marginBottom:10}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+        <div><div style={{color:"#e8d5a3",fontSize:16,fontWeight:"bold"}}>{beer.name}</div><div style={{color:"#888",fontSize:12,marginTop:2}}>{[beer.style,beer.abv?"ABV "+beer.abv+"%":null].filter(Boolean).join(" · ")}</div></div>
+        {avgScore&&<div style={{color:"#c8a96e",fontSize:15,fontWeight:"bold"}}>⭐ {avgScore}</div>}
+      </div>
+      {allRatings.map(r=><div key={r.userId} style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4,fontSize:13}}><span style={{color:"#888"}}>{r.username}</span><span style={{color:"#f5c518"}}>{starLabel(r.score)}</span>{r.note&&<span style={{color:"#aaa",fontSize:12,fontStyle:"italic"}}>{r.note}</span>}</div>)}
+      {!myRating&&!editing&&<button onClick={()=>setEditing(true)} style={{background:"transparent",border:"1px solid #2e2418",color:"#c8a96e",borderRadius:8,padding:"6px 12px",fontSize:13,cursor:"pointer",marginTop:6}}>Rate this beer</button>}
+      {editing&&<div style={{marginTop:8}}><div style={{display:"flex",alignItems:"center",gap:4,marginBottom:8}}>{[1,2,3,4,5].map(n=><button key={n} onClick={()=>setScore(n)} style={{background:"transparent",border:"none",fontSize:28,cursor:"pointer",padding:0,color:n<=score?"#f5c518":"#444"}}>★</button>)}</div><input style={{...inp,marginBottom:8}} value={note} onChange={e=>setNote(e.target.value)} placeholder="Tasting note…" /><div style={{display:"flex",gap:10}}><button onClick={()=>setEditing(false)} style={{flex:1,background:"transparent",color:"#888",border:"1px solid #2e2418",borderRadius:10,padding:"10px 0",fontSize:14,cursor:"pointer"}}>Cancel</button><button onClick={()=>{if(score>0){onRate(score,note);setEditing(false);}}} style={{flex:1,background:"#c8a96e",color:"#0f0c08",border:"none",borderRadius:10,padding:"10px 0",fontSize:14,fontWeight:"bold",cursor:"pointer"}}>Submit</button></div></div>}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
